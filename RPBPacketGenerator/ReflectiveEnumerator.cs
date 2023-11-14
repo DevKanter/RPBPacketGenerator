@@ -1,30 +1,38 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Collections.Immutable;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using Microsoft.CodeAnalysis;
 
 namespace RPBPacketGenerator
 {
     public static class ReflectiveEnumerator
     {
-
-        public static IEnumerable<INamedTypeSymbol> GetEnumerableOfType(GeneratorExecutionContext context)
+        public static IEnumerable<INamedTypeSymbol> GetRPBPackets(GeneratorExecutionContext context)
         {
-            //var list = context.Compilation.SourceModule.ReferencedAssemblySymbols;
-            //foreach (var symbol in list)
-            //{
-            //    var x = symbol.GetForwardedTypes();
-            //    var y = symbol.GlobalNamespace;
-            //    var i = y.GetNamespaceMembers();
-            //}
-            var objects = context.Compilation.GetSymbolsWithName(x => true, SymbolFilter.Type).Select(y => (INamedTypeSymbol)y)
-                .Where(x => x.GetAttributes().Any(attr=>attr.AttributeClass?.Name == "Packet"))
+            var objects = context.Compilation.GetSymbolsWithName(x => true, SymbolFilter.Type)
+                .Select(y => (INamedTypeSymbol) y)
+                .Where(x => x.GetAttributes().Any(attr => _getLowestBaseClassName(attr.AttributeClass) == "BasePacketAttribute"))
                 .ToList();
             return objects;
+        }
+
+        public static IEnumerable<INamedTypeSymbol> GetRPBPacketDataList(GeneratorExecutionContext context)
+        {
+            var objects = context.Compilation.GetSymbolsWithName(x => true, SymbolFilter.Type)
+                .Select(y => (INamedTypeSymbol)y)
+                .Where(x =>x.BaseType?.Name == "RPBPacketData")
+                .ToList();
+            return objects;
+        }
+
+        private static string _getLowestBaseClassName(INamedTypeSymbol symbol)
+        {
+            var result = "";
+            while (symbol.BaseType != null && symbol.BaseType.Name !="Object" && symbol.BaseType.Name != "Attribute")
+            {
+                result = symbol.BaseType.Name;
+                symbol = symbol.BaseType;
+            }
+            return result;
         }
     }
 }
